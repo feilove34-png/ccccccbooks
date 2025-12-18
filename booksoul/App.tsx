@@ -1,0 +1,126 @@
+import React, { useState } from 'react';
+import InputSection from './components/InputSection';
+import AnalysisView from './components/AnalysisView';
+import { generateBookAnalysis } from './services/geminiService';
+import { BookAnalysis, LoadingState } from './types';
+import { Library } from 'lucide-react';
+
+const App: React.FC = () => {
+  const [loadingState, setLoadingState] = useState<LoadingState>(LoadingState.IDLE);
+  const [analysisData, setAnalysisData] = useState<BookAnalysis | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleAnalyze = async (book: string, author: string) => {
+    setLoadingState(LoadingState.LOADING);
+    setErrorMsg(null);
+    setAnalysisData(null);
+
+    try {
+      const result = await generateBookAnalysis(book, author);
+      setAnalysisData(result);
+      setLoadingState(LoadingState.SUCCESS);
+    } catch (error) {
+      console.error(error);
+      setLoadingState(LoadingState.ERROR);
+      setErrorMsg("抱歉，我们在解读这本书时遇到了困难。请检查书名或稍后再试。");
+    }
+  };
+
+  const handleReset = () => {
+    setLoadingState(LoadingState.IDLE);
+    setAnalysisData(null);
+    setErrorMsg(null);
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-stone-100 text-stone-800 selection:bg-amber-200 selection:text-amber-900">
+      
+      {/* Navbar */}
+      <header className="bg-white border-b border-stone-200 sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div 
+            className="flex items-center space-x-2 cursor-pointer group"
+            onClick={handleReset}
+          >
+            <div className="bg-stone-900 p-1.5 rounded-lg group-hover:bg-amber-600 transition-colors">
+              <Library className="h-6 w-6 text-white" />
+            </div>
+            <span className="font-serif-sc font-bold text-xl tracking-tight text-stone-900">BookSoul</span>
+          </div>
+          <div className="text-sm font-medium text-stone-500">
+            阅读 · 思考 · 升华
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-grow px-4 sm:px-6 py-12">
+        {loadingState === LoadingState.IDLE && (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] animate-fade-in-up">
+            <div className="mb-8 text-center max-w-2xl">
+              <h1 className="text-4xl md:text-5xl font-serif-sc font-bold text-stone-800 mb-6 leading-tight">
+                每一本书<br/>
+                都藏着一个<span className="text-amber-700">灵魂</span>
+              </h1>
+              <p className="text-lg text-stone-600">
+                BookSoul 利用 AI 深度阅读，为你提炼书中精华，解读字里行间的深意。
+              </p>
+            </div>
+            <InputSection onAnalyze={handleAnalyze} isLoading={false} />
+          </div>
+        )}
+
+        {loadingState === LoadingState.LOADING && (
+          <div className="flex flex-col items-center justify-center min-h-[50vh]">
+            <InputSection onAnalyze={handleAnalyze} isLoading={true} />
+            <div className="mt-8 text-center max-w-md">
+               <div className="space-y-3">
+                  <div className="h-2 bg-stone-200 rounded w-3/4 mx-auto animate-pulse"></div>
+                  <div className="h-2 bg-stone-200 rounded w-full animate-pulse"></div>
+                  <div className="h-2 bg-stone-200 rounded w-5/6 mx-auto animate-pulse"></div>
+               </div>
+               <p className="mt-4 text-stone-500 text-sm font-serif-sc animate-pulse">
+                 正在翻阅书页，寻找最动人的篇章...
+               </p>
+            </div>
+          </div>
+        )}
+
+        {loadingState === LoadingState.ERROR && (
+          <div className="flex flex-col items-center justify-center min-h-[50vh]">
+            <InputSection onAnalyze={handleAnalyze} isLoading={false} />
+            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 max-w-lg text-center">
+              {errorMsg}
+            </div>
+          </div>
+        )}
+
+        {loadingState === LoadingState.SUCCESS && analysisData && (
+          <div className="animate-fade-in">
+             <div className="flex justify-end mb-4 max-w-4xl mx-auto">
+                <button 
+                  onClick={handleReset}
+                  className="text-stone-500 hover:text-amber-700 text-sm font-medium flex items-center transition-colors"
+                >
+                  ← 搜索另一本书
+                </button>
+             </div>
+             <AnalysisView data={analysisData} />
+          </div>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-stone-900 text-stone-400 py-8">
+        <div className="max-w-6xl mx-auto px-4 text-center">
+          <p className="font-serif-sc mb-2">BookSoul</p>
+          <p className="text-xs text-stone-500">
+            Powered by Google Gemini. Content is generated by AI and may vary.
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default App;
